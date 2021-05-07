@@ -4,17 +4,28 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IngressNotAvailable is returned when a Kubernetes service is not yet available to accept traffic.
 type IngressNotAvailable struct {
-	ingress *extensionsv1beta1.Ingress
+	ingress *networkingv1.Ingress
 }
 
 // Error is a simple function to return a formatted error message as a string
 func (err IngressNotAvailable) Error() string {
+	return fmt.Sprintf("Ingress %s is not available", err.ingress.Name)
+}
+
+// IngressNotAvailableV1Beta1 is returned when a Kubernetes service is not yet available to accept traffic.
+type IngressNotAvailableV1Beta1 struct {
+	ingress *networkingv1beta1.Ingress
+}
+
+// Error is a simple function to return a formatted error message as a string
+func (err IngressNotAvailableV1Beta1) Error() string {
 	return fmt.Sprintf("Ingress %s is not available", err.ingress.Name)
 }
 
@@ -151,4 +162,43 @@ func (err MalformedNodeID) Error() string {
 // NewMalformedNodeIDError returns a MalformedNodeID struct when Kubernetes deems that a NodeID is malformed
 func NewMalformedNodeIDError(node *corev1.Node) MalformedNodeID {
 	return MalformedNodeID{node}
+}
+
+// JSONPathMalformedJSONErr is returned when the jsonpath unmarshal routine fails to parse the given JSON blob.
+type JSONPathMalformedJSONErr struct {
+	underlyingErr error
+}
+
+func (err JSONPathMalformedJSONErr) Error() string {
+	return fmt.Sprintf("Error unmarshaling original json blob: %s", err.underlyingErr)
+}
+
+// JSONPathMalformedJSONPathErr is returned when the jsonpath unmarshal routine fails to parse the given JSON path
+// string.
+type JSONPathMalformedJSONPathErr struct {
+	underlyingErr error
+}
+
+func (err JSONPathMalformedJSONPathErr) Error() string {
+	return fmt.Sprintf("Error parsing json path: %s", err.underlyingErr)
+}
+
+// JSONPathExtractJSONPathErr is returned when the jsonpath unmarshal routine fails to extract the given JSON path from
+// the JSON blob.
+type JSONPathExtractJSONPathErr struct {
+	underlyingErr error
+}
+
+func (err JSONPathExtractJSONPathErr) Error() string {
+	return fmt.Sprintf("Error extracting json path from blob: %s", err.underlyingErr)
+}
+
+// JSONPathMalformedJSONPathResultErr is returned when the jsonpath unmarshal routine fails to unmarshal the resulting
+// data from extraction.
+type JSONPathMalformedJSONPathResultErr struct {
+	underlyingErr error
+}
+
+func (err JSONPathMalformedJSONPathResultErr) Error() string {
+	return fmt.Sprintf("Error unmarshaling json path output: %s", err.underlyingErr)
 }

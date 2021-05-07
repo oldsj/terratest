@@ -54,6 +54,9 @@ func TestTerraformRemoteExecExample(t *testing.T) {
 		// Pick a random AWS region to test in. This helps ensure your code works in all regions.
 		awsRegion := aws.GetRandomStableRegion(t, nil, nil)
 
+		// Some AWS regions are missing certain instance types, so pick an available type based on the region we picked
+		instanceType := aws.GetRecommendedInstanceType(t, awsRegion, []string{"t2.micro", "t3.micro"})
+
 		// Create an EC2 KeyPair that we can use for SSH access
 		keyPairName := fmt.Sprintf("terratest-remote-exec-example-%s", uniqueID)
 		keyPair := aws.CreateAndImportEC2KeyPair(t, awsRegion, keyPairName)
@@ -62,7 +65,9 @@ func TestTerraformRemoteExecExample(t *testing.T) {
 		sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 		defer sshAgent.Stop()
 
-		terraformOptions := &terraform.Options{
+		// Construct the terraform options with default retryable errors to handle the most common retryable errors in
+		// terraform testing.
+		terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 			// The path to where our Terraform code is located
 			TerraformDir: terraformDirectory,
 
@@ -70,11 +75,12 @@ func TestTerraformRemoteExecExample(t *testing.T) {
 			Vars: map[string]interface{}{
 				"aws_region":    awsRegion,
 				"instance_name": instanceName,
+				"instance_type": instanceType,
 				"key_pair_name": keyPairName,
 			},
 
 			SshAgent: sshAgent, // Overrides local SSH agent with our new agent
-		}
+		})
 
 		// Save the options and key pair so later test stages can use them
 		test_structure.SaveTerraformOptions(t, terraformDirectory, terraformOptions)

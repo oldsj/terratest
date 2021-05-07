@@ -4,7 +4,10 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 terraform {
-  required_version = ">= 0.12"
+  # This module is now only being tested with Terraform 0.13.x. However, to make upgrading easier, we are setting
+  # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it
+  # forwards compatible with 0.13.x code.
+  required_version = ">= 0.12.26"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -66,7 +69,7 @@ resource "aws_autoscaling_group" "web_servers" {
 
 resource "aws_launch_configuration" "web_servers" {
   image_id        = data.aws_ami.ubuntu.id
-  instance_type   = "t2.micro"
+  instance_type   = var.instance_type
   security_groups = [aws_security_group.web_server.id]
   user_data       = data.template_file.user_data.rendered
   key_name        = var.key_pair_name

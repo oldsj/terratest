@@ -4,7 +4,10 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 terraform {
-  required_version = ">= 0.12"
+  # This module is now only being tested with Terraform 0.13.x. However, to make upgrading easier, we are setting
+  # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it
+  # forwards compatible with 0.13.x code.
+  required_version = ">= 0.12.26"
 }
 
 provider "aws" {
@@ -63,7 +66,7 @@ data "aws_ami" "amazon_linux_2" {
 
 resource "aws_instance" "example" {
   ami                         = data.aws_ami.amazon_linux_2.id
-  instance_type               = "t2.micro"
+  instance_type               = var.instance_type
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.example.name
 }
