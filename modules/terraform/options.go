@@ -1,11 +1,11 @@
 package terraform
 
 import (
-	"testing"
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/ssh"
+	"github.com/gruntwork-io/terratest/modules/testing"
 	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/require"
 )
@@ -60,6 +60,8 @@ type Options struct {
 	MaxRetries               int                    // Maximum number of times to retry errors matching RetryableTerraformErrors
 	TimeBetweenRetries       time.Duration          // The amount of time to wait between retries
 	Upgrade                  bool                   // Whether the -upgrade flag of the terraform init command should be set to true or not
+	Reconfigure              bool                   // Set the -reconfigure flag to the terraform init command
+	MigrateState             bool                   // Set the -migrate-state and -force-copy (suppress 'yes' answer prompt) flag to the terraform init command
 	NoColor                  bool                   // Whether the -no-color flag will be set for any Terraform command or not
 	SshAgent                 *ssh.SshAgent          // Overrides local SSH agent with the given in-process agent
 	NoStderr                 bool                   // Disable stderr redirection
@@ -86,7 +88,7 @@ func (options *Options) Clone() (*Options, error) {
 // for retryable errors. The included retryable errors are typical errors that most terraform modules encounter during
 // testing, and are known to self resolve upon retrying.
 // This will fail the test if there are any errors in the cloning process.
-func WithDefaultRetryableErrors(t *testing.T, originalOptions *Options) *Options {
+func WithDefaultRetryableErrors(t testing.TestingT, originalOptions *Options) *Options {
 	newOptions, err := originalOptions.Clone()
 	require.NoError(t, err)
 

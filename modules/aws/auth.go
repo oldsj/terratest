@@ -30,6 +30,13 @@ func NewAuthenticatedSession(region string) (*session.Session, error) {
 
 // NewAuthenticatedSessionFromDefaultCredentials gets an AWS Session, checking that the user has credentials properly configured in their environment.
 func NewAuthenticatedSessionFromDefaultCredentials(region string) (*session.Session, error) {
+	// awsConfig := aws.NewConfig().WithRegion(region)
+	// sessionOptions := session.Options{
+		// 	Config:            *awsConfig,
+		// 	SharedConfigState: session.SharedConfigEnable,
+		// }
+	// sess, err := session.NewSessionWithOptions(sessionOptions)
+
 	sess, err := getNewSession(aws.NewConfig().WithRegion(region))
 	if err != nil {
 		return nil, err

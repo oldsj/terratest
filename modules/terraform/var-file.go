@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
-	"testing"
+	"strings"
 
+	"github.com/gruntwork-io/terratest/modules/testing"
+
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
@@ -14,19 +17,19 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
-// GetVariableAsStringFromVarFile Gets the string represention of a variable from a provided input file found in VarFile
+// GetVariableAsStringFromVarFile Gets the string representation of a variable from a provided input file found in VarFile
 // For list or map, use GetVariableAsListFromVarFile or GetVariableAsMapFromVarFile, respectively.
-func GetVariableAsStringFromVarFile(t *testing.T, fileName string, key string) string {
+func GetVariableAsStringFromVarFile(t testing.TestingT, fileName string, key string) string {
 	result, err := GetVariableAsStringFromVarFileE(t, fileName, key)
 	require.NoError(t, err)
 
 	return result
 }
 
-// GetVariableAsStringFromVarFileE Gets the string represention of a variable from a provided input file found in VarFile
+// GetVariableAsStringFromVarFileE Gets the string representation of a variable from a provided input file found in VarFile
 // Will return an error if GetAllVariablesFromVarFileE returns an error or the key provided does not exist in the file.
 // For list or map, use GetVariableAsListFromVarFile or GetVariableAsMapFromVarFile, respectively.
-func GetVariableAsStringFromVarFileE(t *testing.T, fileName string, key string) (string, error) {
+func GetVariableAsStringFromVarFileE(t testing.TestingT, fileName string, key string) (string, error) {
 	var variables map[string]interface{}
 	err := GetAllVariablesFromVarFileE(t, fileName, &variables)
 	if err != nil {
@@ -42,18 +45,18 @@ func GetVariableAsStringFromVarFileE(t *testing.T, fileName string, key string) 
 	return fmt.Sprintf("%v", variable), nil
 }
 
-// GetVariableAsMapFromVarFile Gets the map represention of a variable from a provided input file found in VarFile
+// GetVariableAsMapFromVarFile Gets the map representation of a variable from a provided input file found in VarFile
 // Note that this returns a map of strings. For maps containing complex types, use GetAllVariablesFromVarFile.
-func GetVariableAsMapFromVarFile(t *testing.T, fileName string, key string) map[string]string {
+func GetVariableAsMapFromVarFile(t testing.TestingT, fileName string, key string) map[string]string {
 	result, err := GetVariableAsMapFromVarFileE(t, fileName, key)
 	require.NoError(t, err)
 	return result
 }
 
-// GetVariableAsMapFromVarFileE Gets the map represention of a variable from a provided input file found in VarFile.
+// GetVariableAsMapFromVarFileE Gets the map representation of a variable from a provided input file found in VarFile.
 // Note that this returns a map of strings. For maps containing complex types, use GetAllVariablesFromVarFile
 // Returns an error if GetAllVariablesFromVarFileE returns an error, the key provided does not exist, or the value associated with the key is not a map
-func GetVariableAsMapFromVarFileE(t *testing.T, fileName string, key string) (map[string]string, error) {
+func GetVariableAsMapFromVarFileE(t testing.TestingT, fileName string, key string) (map[string]string, error) {
 	var variables map[string]interface{}
 	err := GetAllVariablesFromVarFileE(t, fileName, &variables)
 	if err != nil {
@@ -77,19 +80,19 @@ func GetVariableAsMapFromVarFileE(t *testing.T, fileName string, key string) (ma
 	return resultMap, nil
 }
 
-// GetVariableAsListFromVarFile Gets the string list represention of a variable from a provided input file found in VarFile
+// GetVariableAsListFromVarFile Gets the string list representation of a variable from a provided input file found in VarFile
 // Note that this returns a list of strings. For lists containing complex types, use GetAllVariablesFromVarFile.
-func GetVariableAsListFromVarFile(t *testing.T, fileName string, key string) []string {
+func GetVariableAsListFromVarFile(t testing.TestingT, fileName string, key string) []string {
 	result, err := GetVariableAsListFromVarFileE(t, fileName, key)
 	require.NoError(t, err)
 
 	return result
 }
 
-// GetVariableAsListFromVarFileE Gets the string list represention of a variable from a provided input file found in VarFile
+// GetVariableAsListFromVarFileE Gets the string list representation of a variable from a provided input file found in VarFile
 // Note that this returns a list of strings. For lists containing complex types, use GetAllVariablesFromVarFile.
 // Will return error if GetAllVariablesFromVarFileE returns an error, the key provided does not exist, or the value associated with the key is not a list
-func GetVariableAsListFromVarFileE(t *testing.T, fileName string, key string) ([]string, error) {
+func GetVariableAsListFromVarFileE(t testing.TestingT, fileName string, key string) ([]string, error) {
 	var variables map[string]interface{}
 	err := GetAllVariablesFromVarFileE(t, fileName, &variables)
 	if err != nil {
@@ -113,9 +116,9 @@ func GetVariableAsListFromVarFileE(t *testing.T, fileName string, key string) ([
 	return resultArray, nil
 }
 
-// GetAllVariablesFromVarFileE Parses all data from a provided input file found ind in VarFile and stores the result in
+// GetAllVariablesFromVarFile Parses all data from a provided input file found ind in VarFile and stores the result in
 // the value pointed to by out.
-func GetAllVariablesFromVarFile(t *testing.T, fileName string, out interface{}) {
+func GetAllVariablesFromVarFile(t testing.TestingT, fileName string, out interface{}) {
 	err := GetAllVariablesFromVarFileE(t, fileName, out)
 	require.NoError(t, err)
 }
@@ -123,7 +126,7 @@ func GetAllVariablesFromVarFile(t *testing.T, fileName string, out interface{}) 
 // GetAllVariablesFromVarFileE Parses all data from a provided input file found ind in VarFile and stores the result in
 // the value pointed to by out. Returns an error if the specified file does not exist, the specified file is not
 // readable, or the specified file cannot be decoded from HCL.
-func GetAllVariablesFromVarFileE(t *testing.T, fileName string, out interface{}) error {
+func GetAllVariablesFromVarFileE(t testing.TestingT, fileName string, out interface{}) error {
 	fileContents, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
@@ -132,9 +135,9 @@ func GetAllVariablesFromVarFileE(t *testing.T, fileName string, out interface{})
 	return parseAndDecodeVarFile(string(fileContents), fileName, out)
 }
 
-// parseAndDecodeVarFile uses the HCL2 parser to parse the given varfile string into an HCL file body, and then decode it
+// parseAndDecodeVarFile uses the HCL2 parser to parse the given varfile string into an HCL or HCL JSON file body, and then decode it
 // into a map that maps var names to values.
-func parseAndDecodeVarFile(hclContents string, filename string, out interface{}) (err error) {
+func parseAndDecodeVarFile(fileContents string, filename string, out interface{}) (err error) {
 	// The HCL2 parser and especially cty conversions will panic in many types of errors, so we have to recover from
 	// those panics here and convert them to normal errors
 	defer func() {
@@ -145,7 +148,16 @@ func parseAndDecodeVarFile(hclContents string, filename string, out interface{})
 
 	parser := hclparse.NewParser()
 
-	file, parseDiagnostics := parser.ParseHCL([]byte(hclContents), filename)
+	var file *hcl.File
+	var parseDiagnostics hcl.Diagnostics
+
+	// determine if a JSON variables file is submitted and parse accordingly
+	if strings.HasSuffix(filename, ".json") {
+		file, parseDiagnostics = parser.ParseJSON([]byte(fileContents), filename)
+	} else {
+		file, parseDiagnostics = parser.ParseHCL([]byte(fileContents), filename)
+	}
+
 	if parseDiagnostics != nil && parseDiagnostics.HasErrors() {
 		return parseDiagnostics
 	}

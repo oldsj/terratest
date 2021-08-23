@@ -1,18 +1,27 @@
 env: &env
   environment:
-    GRUNTWORK_INSTALLER_VERSION: v0.0.34
-    MODULE_CI_VERSION: v0.29.2
+    GRUNTWORK_INSTALLER_VERSION: v0.0.36
+    MODULE_CI_VERSION: v0.33.3
     MODULE_GCP_CI_VERSION: v0.1.1
-    TERRAFORM_VERSION: 0.15.0
-    TERRAGRUNT_VERSION: v0.28.24
-    PACKER_VERSION: 1.6.6
-    GO_VERSION: 1.14
+    TERRAFORM_VERSION: 1.0.3
+    PACKER_VERSION: 1.7.4
+    TERRAGRUNT_VERSION: v0.31.4
+    GO_VERSION: 1.16.3
+    GO111MODULE: auto
     K8S_VERSION: v1.15.0  # Same as EKS
     MINIKUBE_VERSION: v1.9.2
     HELM_VERSION: v3.1.1
     KUBECONFIG: /home/circleci/.kube/config
+    BIN_BUILD_PARALLELISM: 3
 
 defaults: &defaults
+  machine:
+    enabled: true
+    image: "ubuntu-2004:202107-02"
+  <<: *env
+
+# minikube setup requires ubuntu16.04
+minikube_defaults: &minikube_defaults
   machine:
     enabled: true
     image: "ubuntu-1604:201903-01"
@@ -50,6 +59,17 @@ install_gruntwork_utils: &install_gruntwork_utils
     sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
     sudo ln -s /usr/local/go/bin/go /usr/bin/go
     echo "The installed version of Go is now $(go version)"
+
+install_docker_buildx: &install_docker_buildx
+  name: install docker buildx
+  command: |
+    curl -sLO https://github.com/docker/buildx/releases/download/v0.6.1/buildx-v0.6.1.linux-amd64
+    mkdir -p ~/.docker/cli-plugins
+    mv buildx-v0.6.1.linux-amd64 ~/.docker/cli-plugins/docker-buildx
+    chmod a+x ~/.docker/cli-plugins/docker-buildx
+
+    # Verify buildx is available
+    docker buildx create --use
 
 configure_environment_for_gcp: &configure_environment_for_gcp
   name: configure environment for gcp
@@ -107,13 +127,20 @@ jobs:
       # binaries to GitHub as release assets.
       - run:
           command: |
+            # For some reason, the circleci environment requires additional module dependencies that are not captured by
+            # our Linux or Mac OSX dev environments. We workaround this by running `go mod tidy` in the CircleCI
+            # environment so it pulls in what it needs.
+            go mod tidy
+
             GO_ENABLED=0 build-go-binaries \
+              --parallel "$BIN_BUILD_PARALLELISM" \
               --app-name terratest_log_parser \
               --src-path ./cmd/terratest_log_parser \
               --dest-path ./cmd/bin \
               --ld-flags "-X main.VERSION=$CIRCLE_TAG -extldflags '-static'"
 
             GO_ENABLED=0 build-go-binaries \
+              --parallel "$BIN_BUILD_PARALLELISM" \
               --app-name pick-instance-type \
               --src-path ./cmd/pick-instance-type \
               --dest-path ./cmd/bin \
@@ -134,6 +161,8 @@ jobs:
 
       - run:
           <<: *install_gruntwork_utils
+      - run:
+          <<: *install_docker_buildx
 
       # The weird way you have to set PATH in Circle 2.0
       - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
@@ -200,7 +229,7 @@ jobs:
           path: /tmp/logs
 
   kubernetes_test:
-    <<: *defaults
+    <<: *minikube_defaults
     steps:
       - attach_workspace:
           at: /home/circleci
@@ -236,7 +265,7 @@ jobs:
 
 
   helm_test:
-    <<: *defaults
+    <<: *minikube_defaults
     steps:
       - attach_workspace:
           at: /home/circleci
